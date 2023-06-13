@@ -15,19 +15,6 @@ PORT = '8000'
 KEY = ''
 ROOT = ''
 
-def handler_from(directory):
-    def _init(self, *args, **kwargs):
-        return http.server.SimpleHTTPRequestHandler.__init__(self, *args, directory=self.directory, **kwargs)
-    return type(f'HandlerFrom<{directory}>',
-                (http.server.SimpleHTTPRequestHandler,),
-                {'__init__': _init, 'directory': directory})
-
-
-
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=ROOT, **kwargs)
-
 def alafa_handler_from(directory):
     """alafa_handler_from can set the target directory of file server."""
     def _init(self, *args, **kwargs):
@@ -69,15 +56,17 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
         print("已经认证")
         f = self.send_head()
         if f:
-            self.copyfile(f, self.wfile)
-            f.close()
+            try:
+                self.copyfile(f, self.wfile)
+            finally:
+                f.close()
+
 
     def do_HEAD(self):
         """Serve a HEAD request."""
         f = self.send_head()
         if f:
             f.close()
-
  
     def do_POST(self):
         """Serve a POST request."""
@@ -150,9 +139,11 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
         try:
             list = os.listdir(path)
         except OSError:
-            self.send_error(
-                HTTPStatus.NOT_FOUND,
-                "No permission to list directory")
+            tmpl = environment.get_template("not_found_cn.html")
+            cont = tmpl.render(message="你可能没有权限访问该内容。")
+            self.send_response(HTTPStatus.NOT_FOUND)
+            self.end_headers()
+            self.wfile.write(cont.encode("utf-8"))
             return None
         list.sort(key=lambda a: a.lower())
         try:
@@ -178,7 +169,6 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
                         'href':urllib.parse.quote(linkname, errors='surrogatepass'),
                         'caption':html.escape(displayname, quote=False)
                         }
-            # print(itemdict)
             ilist.append(itemdict)
 
         tmpl = environment.get_template("list_dir_cn.html")
