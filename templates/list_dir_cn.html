@@ -1,0 +1,20 @@
+{% extends 'base_cn.html' %}
+{% block title %} {{ title }} {% endblock %}
+{% block body %}
+  <h1> 
+    <a href="/">
+      {{ title }}
+    </a> 
+  </h1>
+  <hr>
+  <form enctype="multipart/form-data" method="post">
+    <input name="file" type="file" />
+    <input type="submit" value="上传" />
+  </form>
+  <hr>
+  <ol>
+  {% for item in itemlist %}
+    <li><a href="{{ item.href }}">{{ item.caption }}</a></li>
+  {% endfor %}
+  </ol>
+{% endblock %}
