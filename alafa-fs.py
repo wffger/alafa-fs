@@ -8,7 +8,8 @@ import urllib
 from http import HTTPStatus
 import html
 from jinja2 import Environment, FileSystemLoader
- 
+
+__version__="0.1.2"
 environment = Environment(loader=FileSystemLoader("templates/"))
 
 PORT = '8000'
@@ -25,13 +26,11 @@ def alafa_handler_from(directory):
 
 class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
     """AlafaRequestHandler is a SimpleHTTPRequestHandler who can handle file upload with post method."""
-    server_version = "SimpleHTTP/"
+
     def is_authenticated(self):
         """Check if is authenticated."""
         global KEY
         auth_header = self.headers['Authorization']
-        print(f"auth_header is {auth_header}")
-        print('Basic ' + KEY)
         return auth_header and auth_header == 'Basic ' + KEY
     def do_auth_head(self):
         """"Set authenthicaed head"""
@@ -53,7 +52,7 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
         """Serve a GET request."""
         if not self.try_authenticate():
             return
-        print("已经认证")
+        self.log_message("已经认证")
         f = self.send_head()
         if f:
             try:
@@ -177,10 +176,13 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "text/html;charset=UTF-8")
         self.end_headers()
         self.wfile.write(cont.encode("utf-8"))
-            
         return None
 
+
 def init_server():
+    """
+    初始化服务器
+    """
     if len(sys.argv) !=4:
         scriptname=sys.argv[0]
         print(f"当前参数个数为 {len(sys.argv)}")
@@ -190,8 +192,10 @@ def init_server():
         PORT = int(sys.argv[1])
         KEY = base64.b64encode(sys.argv[2].encode("utf-8")).decode("utf-8")
         ROOT = sys.argv[3]
-
+        
         with socketserver.TCPServer(("", PORT), alafa_handler_from(ROOT)) as httpd:
+            httpd.allow_reuse_address=True
+            
             print(f"监听中 http://localhost:{PORT} | 密钥为 {KEY}")
             print("服务器已经启动，可以使用<Ctrl-C>停止服务")
             httpd.serve_forever()
