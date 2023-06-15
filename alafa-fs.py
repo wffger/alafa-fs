@@ -4,6 +4,7 @@ import sys
 import base64
 import re
 import os
+import time
 import urllib
 from http import HTTPStatus
 import html
@@ -26,7 +27,11 @@ def alafa_handler_from(directory):
 
 class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
     """AlafaRequestHandler is a SimpleHTTPRequestHandler who can handle file upload with post method."""
-
+    def log_date_time_string(self):
+        """Return the current time formatted for logging."""
+        strftime = time.strftime("%Y-%m-%d %H:%M:%S")
+        return strftime
+    
     def is_authenticated(self):
         """Check if is authenticated."""
         global KEY
@@ -43,13 +48,14 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
         """"Handle authentication."""
         if not self.is_authenticated():
             self.do_auth_head()
-            print("仲未认证")
+            self.log_error("仲未认证")
             self.wfile.write(b"Not Authorization")
             return False
         return True
 
     def do_GET(self):
         """Serve a GET request."""
+        self.log_message(self.date_time_string())
         if not self.try_authenticate():
             return
         self.log_message("已经认证")
@@ -70,7 +76,7 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         """Serve a POST request."""
         r, info = self.deal_post_data()
-        print(r, info, "by: ", self.client_address)
+        self.log_message(r, info, "by: ", self.client_address)
         if r:
             result="成功"
         else:
@@ -152,7 +158,6 @@ class AlafaRquestHandler(http.server.SimpleHTTPRequestHandler):
             displaypath = urllib.parse.unquote(self.path)
         displaypath = html.escape(displaypath, quote=False)
         enc = sys.getfilesystemencoding()
-        # print(list)
         ilist=[]
         for name in list:
             fullname = os.path.join(path, name)
@@ -192,10 +197,8 @@ def init_server():
         PORT = int(sys.argv[1])
         KEY = base64.b64encode(sys.argv[2].encode("utf-8")).decode("utf-8")
         ROOT = sys.argv[3]
-        
+        socketserver.TCPServer.allow_reuse_address = True
         with socketserver.TCPServer(("", PORT), alafa_handler_from(ROOT)) as httpd:
-            httpd.allow_reuse_address=True
-            
             print(f"监听中 http://localhost:{PORT} | 密钥为 {KEY}")
             print("服务器已经启动，可以使用<Ctrl-C>停止服务")
             httpd.serve_forever()
